@@ -53,7 +53,7 @@ rank(30) = 2;
 
 ## Interface
 
-​	This is a header-only library designed for modern C++. Its interface is similar to that of the list container in the C++ standard library. Therefore, it can be used easily with almost no learning cost.
+​	This is a header-only library designed for modern C++. Its interface is similar to that of the container in the C++ standard library. Therefore, it can be used easily with almost no learning cost.
 
 ### sb_tree
 
