@@ -463,9 +463,6 @@ public:
 		: allocator(std::forward<Allocator>(alloc))
 	{}
 
-	~sb_tree_node_allocator(void)
-	{}
-
 	// sb_tree_node_allocator operations:
 
 	inline allocator_type get_allocator(void) noexcept
@@ -515,8 +512,8 @@ public:
 	using tree_type                        = sb_tree<T, Compare, Allocator>;
 	using tree_traits_type                 = std::allocator_traits<Allocator>;
 	using node_type                        = typename sb_tree_node<T>::node_type;
-	using node_pointer                     = typename node_type*;
-	using const_node_pointer               = typename const node_type*;
+	using node_pointer                     = typename sb_tree_node<T>::node_pointer;
+	using const_node_pointer               = typename sb_tree_node<T>::const_node_pointer;
 	using node_allocator_type              = typename tree_traits_type::template rebind_alloc<node_type>;
 	using allocator_type                   = typename tree_traits_type::template rebind_alloc<T>;
 	using traits_type                      = typename tree_traits_type::template rebind_traits<T>;
@@ -553,6 +550,24 @@ public:
 	{
 		create_header();
 	}
+	template <class InputIt>
+	sb_tree(InputIt first, InputIt last, const compare_type& compare = compare_type(), const Allocator& alloc = Allocator())
+		: sb_tree_node_allocator<T, Allocator>(alloc)
+		, comp(compare)
+		, header(nullptr)
+	{
+		create_header();
+		insert_unique(first, last);
+	}
+	template <class InputIt>
+	sb_tree(InputIt first, InputIt last, const Allocator& alloc)
+		: sb_tree_node_allocator<T, Allocator>(alloc)
+		, comp(compare_type())
+		, header(nullptr)
+	{
+		create_header();
+		insert_unique(first, last);
+	}
 	sb_tree(const tree_type& other)
 		: sb_tree_node_allocator<T, Allocator>()
 		, comp(other.comp)
@@ -587,13 +602,13 @@ public:
 		create_header();
 		swap(other);
 	}
-	sb_tree(std::initializer_list<T> ilist, const Allocator& alloc = Allocator())
+	sb_tree(std::initializer_list<T> init, const Allocator& alloc = Allocator())
 		: sb_tree_node_allocator<T, Allocator>(alloc)
 		, comp(Compare())
 		, header(nullptr)
 	{
 		create_header();
-		insert_unique(ilist.begin(), ilist.end());
+		insert_unique(init.begin(), init.end());
 	}
 
 	~sb_tree(void)
@@ -620,36 +635,36 @@ public:
 		return *this;
 	}
 
-	inline void assign_equal(const_iterator first, const_iterator last)
-	{
-		clear();
-		insert_equal(first, last);
-	}
 	inline void assign_equal(size_type n, const value_type& value)
 	{
 		clear();
 		insert_equal(n, value);
 	}
-	inline void assign_equal(std::initializer_list<value_type> ilist)
+	template <class InputIt>
+	inline void assign_equal(InputIt first, InputIt last)
 	{
 		clear();
-		insert_equal(ilist.begin(), ilist.end());
+		insert_equal(first, last);
+	}
+	inline void assign_equal(std::initializer_list<value_type> init)
+	{
+		assign_equal(init.begin(), init.end());
 	}
 
-	inline void assign_unique(const_iterator first, const_iterator last)
-	{
-		clear();
-		insert_unique(first, last);
-	}
 	inline void assign_unique(const value_type& value)
 	{
 		clear();
 		insert_unique(value);
 	}
-	inline void assign_unique(std::initializer_list<value_type> ilist)
+	template <class InputIt>
+	inline void assign_unique(InputIt first, InputIt last)
 	{
 		clear();
-		insert_unique(ilist.begin(), ilist.end());
+		insert_unique(first, last);
+	}
+	inline void assign_unique(std::initializer_list<value_type> init)
+	{
+		assign_unique(init.begin(), init.end());
 	}
 
 	// iterators:
@@ -775,30 +790,25 @@ public:
 
 	// element access:
 
-	inline reference operator[](size_type pos) noexcept
-	{
-		return select_node(pos)->data;
-	}
-	inline const_reference operator[](size_type pos) const noexcept
-	{
-		return select_node(pos)->data;
-	}
-
-	inline reference at(size_type pos)
+	template <class KeyType>
+	inline reference at(const KeyType& key)
 	{
 		if (empty())
 			throw std::domain_error(SBT_NOT_INITIALIZED);
-		if (pos >= size())
+		iterator itr = find(key);
+		if (itr == end())
 			throw std::out_of_range(SBT_OUT_OF_RANGE);
-		return select_node(pos)->data;
+		return itr->data;
 	}
-	inline const_reference at(size_type pos) const
+	template <class KeyType>
+	inline const_reference at(const KeyType& key) const
 	{
 		if (empty())
 			throw std::domain_error(SBT_NOT_INITIALIZED);
-		if (pos >= size())
+		const_iterator itr = find(key);
+		if (itr == cend())
 			throw std::out_of_range(SBT_OUT_OF_RANGE);
-		return select_node(pos)->data;
+		return itr->data;
 	}
 
 	// modifiers:
@@ -813,7 +823,6 @@ public:
 	{
 		return iterator(insert_equal_node(value));
 	}
-
 	inline iterator insert_equal(value_type&& value)
 	{
 		return iterator(insert_equal_node(std::forward<value_type>(value)));
@@ -841,26 +850,26 @@ public:
 		}
 		return iterator(t);
 	}
-	inline iterator insert_equal(std::initializer_list<value_type> ilist)
+	inline iterator insert_equal(std::initializer_list<value_type> init)
 	{
-		return insert_equal(ilist.begin(), ilist.end());
+		return insert_equal(init.begin(), init.end());
 	}
 
 	template <class... Args>
 	inline std::pair<iterator, bool> emplace_unique(Args&&... args)
 	{
-		auto res = insert_unique_node(std::forward<Args>(args)...);
+		std::pair<node_pointer, bool> res = insert_unique_node(std::forward<Args>(args)...);
 		return std::make_pair(iterator(res.first), res.second);
 	}
 
 	inline std::pair<iterator, bool> insert_unique(const value_type& value)
 	{
-		auto res = insert_unique_node(value);
+		std::pair<node_pointer, bool> res = insert_unique_node(value);
 		return std::make_pair(iterator(res.first), res.second);
 	}
 	inline std::pair<iterator, bool> insert_unique(value_type&& value)
 	{
-		auto res = insert_unique_node(std::forward<value_type>(value));
+		std::pair<node_pointer, bool> res = insert_unique_node(std::forward<value_type>(value));
 		return std::make_pair(iterator(res.first), res.second);
 	}
 	template <class InputIt>
@@ -869,9 +878,9 @@ public:
 		for (; first != last; ++first)
 			insert_unique_node(*first);
 	}
-	inline void insert_unique(std::initializer_list<value_type> ilist)
+	inline void insert_unique(std::initializer_list<value_type> init)
 	{
-		insert_unique(ilist.begin(), ilist.end());
+		insert_unique(init.begin(), init.end());
 	}
 
 	inline iterator erase(const_iterator pos)
@@ -894,17 +903,18 @@ public:
 				erase(first++);
 		return next;
 	}
-	inline size_type erase(const value_type& key)
+	template <class KeyType>
+	inline size_type erase(const KeyType& key)
 	{
-		size_type count = 0;
+		size_type n = 0;
 		iterator first = lower_bound(key);
 		iterator last = upper_bound(key);
 		while (first != last)
 		{
-			++count;
+			++n;
 			erase(first++);
 		}
-		return count;
+		return n;
 	}
 
 	inline void swap(tree_type& rhs) noexcept
@@ -929,29 +939,35 @@ public:
 
 	// operations:
 
-	inline iterator find(const value_type& key) noexcept
+	template <class KeyType>
+	inline iterator find(const KeyType& key) noexcept
 	{
 		return iterator(find_node(key));
 	}
-	inline const_iterator find(const value_type& key) const noexcept
+	template <class KeyType>
+	inline const_iterator find(const KeyType& key) const noexcept
 	{
 		return const_iterator(find_node(key));
 	}
 
-	inline iterator lower_bound(const value_type& key) noexcept
+	template <class KeyType>
+	inline iterator lower_bound(const KeyType& key) noexcept
 	{
 		return iterator(lower_bound_node(key));
 	}
-	inline const_iterator lower_bound(const value_type& key) const noexcept
+	template <class KeyType>
+	inline const_iterator lower_bound(const KeyType& key) const noexcept
 	{
 		return const_iterator(lower_bound_node(key));
 	}
 
-	inline iterator upper_bound(const value_type& key) noexcept
+	template <class KeyType>
+	inline iterator upper_bound(const KeyType& key) noexcept
 	{
 		return iterator(upper_bound_node(key));
 	}
-	inline const_iterator upper_bound(const value_type& key) const noexcept
+	template <class KeyType>
+	inline const_iterator upper_bound(const KeyType& key) const noexcept
 	{
 		return const_iterator(upper_bound_node(key));
 	}
@@ -1012,7 +1028,8 @@ private:
 		}
 	}
 
-	node_pointer find_node(const value_type& key) const noexcept
+	template <class KeyType>
+	node_pointer find_node(const KeyType& key) const noexcept
 	{
 		node_pointer pre = header;
 		node_pointer cur = header->parent;
@@ -1031,7 +1048,8 @@ private:
 		return pre;
 	}
 
-	node_pointer lower_bound_node(const value_type& key) const noexcept
+	template <class KeyType>
+	node_pointer lower_bound_node(const KeyType& key) const noexcept
 	{
 		node_pointer pre = header;
 		node_pointer cur = header->parent;
@@ -1048,7 +1066,8 @@ private:
 		return pre;
 	}
 
-	node_pointer upper_bound_node(const value_type& key) const noexcept
+	template <class KeyType>
+	node_pointer upper_bound_node(const KeyType& key) const noexcept
 	{
 		node_pointer pre = header;
 		node_pointer cur = header->parent;
@@ -1084,7 +1103,8 @@ private:
 		return header;
 	}
 
-	size_type rank_node(const value_type& key) const noexcept
+	template <class KeyType>
+	size_type rank_node(const KeyType& key) const noexcept
 	{
 		size_type rank = 0;
 		node_pointer pre = header;
@@ -1502,7 +1522,7 @@ private:
 		return l;
 	}
 
-	node_pointer insert_rebalance(node_pointer t, bool flag)
+	node_pointer insert_rebalance(node_pointer t, bool flag) const noexcept
 	{
 		if (flag)
 		{
@@ -1553,7 +1573,7 @@ private:
 		return t;
 	}
 
-	node_pointer erase_rebalance(node_pointer t, bool flag)
+	node_pointer erase_rebalance(node_pointer t, bool flag) const noexcept
 	{
 		if (!flag)
 		{
