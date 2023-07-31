@@ -550,24 +550,6 @@ public:
 	{
 		create_header();
 	}
-	template <class InputIt>
-	sb_tree(InputIt first, InputIt last, const compare_type& compare = compare_type(), const Allocator& alloc = Allocator())
-		: sb_tree_node_allocator<T, Allocator>(alloc)
-		, comp(compare)
-		, header(nullptr)
-	{
-		create_header();
-		insert_unique(first, last);
-	}
-	template <class InputIt>
-	sb_tree(InputIt first, InputIt last, const Allocator& alloc)
-		: sb_tree_node_allocator<T, Allocator>(alloc)
-		, comp(compare_type())
-		, header(nullptr)
-	{
-		create_header();
-		insert_unique(first, last);
-	}
 	sb_tree(const tree_type& other)
 		: sb_tree_node_allocator<T, Allocator>()
 		, comp(other.comp)
