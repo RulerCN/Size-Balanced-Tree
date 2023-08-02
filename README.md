@@ -4,7 +4,7 @@
 
 ## Applicability
 
-​	A Size-Balanced Tree maintains balance not only in terms of the binary search tree property but also in terms of the number of nodes in the tree. Therefore, it can provide selection and ranking operations without introducing additional information. Although SBT can provide all the functions of a standard binary search tree, it still cannot replace Red-Black Tree (RBT) from a performance perspective. However, SBT is particularly suitable for high-performance selection and sorting operations, such as accessing elements by index, median sorting, and so on.
+  A Size-Balanced Tree only depends on the node size to maintain balance, so it can provide selection and ranking operations without introducing additional information. Although SBT can provide all the functions of a standard binary search tree, it still cannot replace Red-Black Tree (RBT) from a performance perspective. However, SBT is particularly suitable for high-performance selection and sorting operations, such as accessing elements by index, median filtering, and so on.
 
 ## Example
 
