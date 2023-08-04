@@ -612,8 +612,7 @@ public:
 	}
 	inline tree_type& operator=(tree_type&& other) noexcept
 	{
-		if (this != &other)
-			swap(other);
+		swap(other);
 		return *this;
 	}
 
@@ -899,12 +898,12 @@ public:
 		return n;
 	}
 
-	inline void swap(tree_type& rhs) noexcept
+	inline void swap(tree_type& other) noexcept
 	{
-		if (this != &rhs)
+		if (this != &other)
 		{
-			std::swap(header, rhs.header);
-			std::swap(comp, rhs.comp);
+			std::swap(header, other.header);
+			std::swap(comp, other.comp);
 		}
 	}
 
